@@ -1,1 +1,2 @@
-# ml_libs
+# Some functions/libs to assist in training ML
+
