@@ -46,6 +46,55 @@ def get_train_test_ids(idf,test_split=0.2,class_col='Grup ',id_col = 'Animal',mi
 def get_train_test(idf,train_test_ids_list,id_col = 'Animal'):
     return [ pd.concat([ idf[idf[id_col]== idx] for idx in ids],0).reset_index(drop=True) for ids in train_test_ids_list ]
 
+def binary_tp_tn_fp_fn(y_true,y_pred):
+    """
+    returns true positive, true negative, false positive and false negative
+    Input example:
+    >y_true = np.array([0,0,1,1,1,0,1,0,0])
+    >y_pred = np.array([1,0,1,0,1,0,0,1,1])
+    >binary_tp_tn_fp_fn(y_true,y_pred)
+    returned: (2, 2, 3, 2)
+    """
+    tp = np.sum(y_true*y_pred)
+    y_true_ = np.abs(y_true-1)
+    y_pred_ = np.abs(y_pred-1)
+    tn = np.sum(y_true_*y_pred_)
+    fp = np.sum(y_pred) - tp
+    fn = np.sum(y_pred_) -tn
+    return tp,tn,fp,fn
+
+def binary_sens_spec(tp,tn,fp,fn,epsilon=1e-8):
+    """
+    Returns sensibility and specificity
+    """
+    sens = tp/(tp+fn+epsilon)
+    spec = tn/(tn+fp+epsilon)
+    return sens, spec
+
+def get_binary_sens_spec(y_true,y_pred,epsilon=1e-8,round_n = 3):
+    """
+    Calculate sensitivity and specificity given ground truth and prediction for
+    binary classification
+    """
+    sens, spec =  binary_sens_spec(*binary_tp_tn_fp_fn(y_true,y_pred),epsilon)
+    return round(sens,round_n),round(spec,round_n)
+
+def get_binary_sensitivity(y_true,y_pred,epsilon=1e-8,round_n = 3):
+    """
+    Calculate sensitivity given ground truth and prediction for
+    binary classification
+    """
+    return get_binary_sens_spec(y_true,y_pred,epsilon,round_n)[0]
+
+def get_binary_specificity(y_true,y_pred,epsilon=1e-8,round_n = 3):
+    """
+    Calculate specificity given ground truth and prediction for
+    binary classification
+    """
+    return get_binary_sens_spec(y_true,y_pred,epsilon,round_n)[1]
+
+
+
 def get_metrics(base, pred):
     from sklearn import metrics
     """
@@ -107,10 +156,12 @@ def get_top_corr(ix,iy,get_top_cc = 10):
     print("Top {} correlation values {}".format(get_top_cc,top_cc_vals))
     return ix[:,top_cc_index].copy()
 
+"""
 def cv_metrics_stratified_class(X, Y, stratus_list,clf, clfk={}, kfold=5,shuffle=True):
     #https://scikit-learn.org/stable/modules/model_evaluation.html#classification-metrics
     from sklearn.model_selection import StratifiedKFold
     from sklearn import metrics
+    sk_metrics
     skf = StratifiedKFold(n_splits=kfold,shuffle=shuffle)
     skf.get_n_splits(X, stratus_list)
     output_metrics = {'roc_auc_score': []}
@@ -122,6 +173,37 @@ def cv_metrics_stratified_class(X, Y, stratus_list,clf, clfk={}, kfold=5,shuffle
         pred_test = r.predict(X_test)
         pred_prob = r.predict_proba(X_test)[:,1]
         output_metrics['roc_auc_score'].append(metrics.roc_auc_score(y_test,pred_prob))
+    return output_metrics.copy()
+"""
+
+def cv_metrics_stratified_class(X, Y, stratus_list,clf, clfk={}, kfold=5,shuffle=True,
+                               report_metrics=['roc_auc_score','auc','f1_score','sensitivity','specificity']):
+    #https://scikit-learn.org/stable/modules/model_evaluation.html#classification-metrics
+    from sklearn.model_selection import StratifiedKFold
+    from sklearn import metrics
+    calc_metrics = {'roc_auc_score':metrics.roc_auc_score,
+                  'auc':metrics.auc,
+                  'f1_score':metrics.f1_score,
+                  'sensitivity':get_binary_sensitivity,
+                  'specificity':get_binary_specificity
+                 }
+    skf = StratifiedKFold(n_splits=kfold,shuffle=shuffle)
+    skf.get_n_splits(X, stratus_list)
+    output_metrics = {}
+    for m in report_metrics:
+        output_metrics[m]=[]
+    for train_index, test_index in skf.split(X, Y):
+        X_train, X_test = X[train_index], X[test_index]
+        y_train, y_test = Y[train_index], Y[test_index]
+        r = clf(**clfk)
+        r.fit(X_train, y_train)
+        pred_test = r.predict(X_test)
+        pred_prob = r.predict_proba(X_test)[:,1]
+        for m in report_metrics:
+            if m in ['roc_auc_score']:
+                output_metrics[m].append(calc_metrics[m](y_test,pred_prob))
+            else:
+                output_metrics[m].append(calc_metrics[m](y_test,pred_test))
     return output_metrics.copy()
 
 def metrics_stats(ilist,rn=3):
