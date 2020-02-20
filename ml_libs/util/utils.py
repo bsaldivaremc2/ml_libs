@@ -68,3 +68,31 @@ def val_to_type(istr,target_type):
         return str(istr)
     if target_type == 'bool':
         return bool(istr)
+
+def save_obj(obj, filename):
+    import pickle
+    import os
+    odir="./"
+    if "/" in filename:
+        odir = "/".join(filename.split("/")[:-1])
+    os.makedirs(odir, exist_ok=True)
+    with open(filename + '.pkl', 'wb') as f:
+        pickle.dump(obj, f, pickle.HIGHEST_PROTOCOL)
+        print(filename + ".pkl saved")
+
+
+def load_obj(name):
+    import pickle
+    if ".pkl" in name:
+        name = "".join(name.split('.pkl')[:-1])
+    with open(name + '.pkl', 'rb') as f:
+        return pickle.load(f)
+
+def get_vector_from_list(ilist):
+    cols = len(ilist)
+    output = {}
+    for i in range(cols):
+        base = np.zeros((1,cols))
+        base[0,i]=1
+        output[ilist[i]]=base.copy()
+    return output.copy()
