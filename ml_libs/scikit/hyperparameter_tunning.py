@@ -156,38 +156,6 @@ def get_top_corr(ix,iy,get_top_cc = 10):
     print("Top {} correlation values {}".format(get_top_cc,top_cc_vals))
     return ix[:,top_cc_index].copy()
 
-"""
-
-def cv_metrics_stratified_class(X, Y, stratus_list,clf, clfk={}, kfold=5,shuffle=True,
-                               report_metrics=['roc_auc_score','auc','f1_score','sensitivity','specificity']):
-    #https://scikit-learn.org/stable/modules/model_evaluation.html#classification-metrics
-    from sklearn.model_selection import StratifiedKFold
-    from sklearn import metrics
-    calc_metrics = {'roc_auc_score':metrics.roc_auc_score,
-                  'auc':metrics.auc,
-                  'f1_score':metrics.f1_score,
-                  'sensitivity':get_binary_sensitivity,
-                  'specificity':get_binary_specificity
-                 }
-    skf = StratifiedKFold(n_splits=kfold,shuffle=shuffle)
-    skf.get_n_splits(X, stratus_list)
-    output_metrics = {}
-    for m in report_metrics:
-        output_metrics[m]=[]
-    for train_index, test_index in skf.split(X, Y):
-        X_train, X_test = X[train_index], X[test_index]
-        y_train, y_test = Y[train_index], Y[test_index]
-        r = clf(**clfk)
-        r.fit(X_train, y_train)
-        pred_test = r.predict(X_test)
-        pred_prob = r.predict_proba(X_test)[:,1]
-        for m in report_metrics:
-            if m in ['roc_auc_score']:
-                output_metrics[m].append(calc_metrics[m](y_test,pred_prob))
-            else:
-                output_metrics[m].append(calc_metrics[m](y_test,pred_test))
-    return output_metrics.copy()
-"""
 def cv_metrics_stratified_class(X, Y, stratus_list,clf, clfk={}, kfold=5,shuffle=True,
                                report_metrics=['roc_auc_score','auc','f1_score','sensitivity','specificity'],
                                norm=False):
@@ -334,3 +302,79 @@ def cv_metrics_stratified_class_report(X, Y, stratus_list,clf, clfk={}, kfold=5,
     ocols.extend(list(filter(lambda x: x not in ocols,odf.columns)))
     odf = odf[ocols].reset_index(drop=True)
     return odf.copy()
+
+
+def cv_metrics_stratified_class_with_indexes(X, Y, indexes,clf, clfk={}, kfold=5,shuffle=True,
+                               report_metrics=['roc_auc_score','auc','f1_score','sensitivity','specificity'],
+                               norm=False):
+    #https://scikit-learn.org/stable/modules/model_evaluation.html#classification-metrics
+    from sklearn import metrics
+    calc_metrics = {'roc_auc_score':metrics.roc_auc_score,
+                  'auc':metrics.auc,
+                  'f1_score':metrics.f1_score,
+                  'sensitivity':get_binary_sensitivity,
+                  'specificity':get_binary_specificity
+                 }
+    output_metrics = {}
+    for m in report_metrics:
+        output_metrics[m]=[]
+    for train_index, test_index in indexes:
+        X_train, X_test = X[train_index], X[test_index]
+        y_train, y_test = Y[train_index], Y[test_index]
+        if len(y_test.shape)>1:
+            y_test = y_test.argmax(1)
+        r = clf(**clfk)
+        if norm==True:
+            n_mean = X_train.mean(0)
+            n_std = X_train.std(0)
+            def z_score(ix,im,istd):
+                return (ix-im)/istd
+            X_train, X_test = z_score(X_train,n_mean,n_std),z_score(X_test,n_mean,n_std)
+        r.fit(X_train, y_train)
+        pred_test = r.predict(X_test)
+        pred_prob = r.predict_proba(X_test)[:,1]
+        for m in report_metrics:
+            if m in ['roc_auc_score']:
+                output_metrics[m].append(calc_metrics[m](y_test,pred_prob))
+            else:
+                output_metrics[m].append(calc_metrics[m](y_test,pred_test))
+    return output_metrics.copy()
+
+def cv_metrics_stratified_class_report_with_indexes(X, Y, indexes,clf, clfk={}, kfold=5,shuffle=True,
+                               report_metrics=['roc_auc_score','auc','f1_score','sensitivity','specificity'],
+                                      regressor_name='Regressor',sort_report_by='roc_auc_score',norm=False):
+    report_data = []
+    metrics = cv_metrics_stratified_class_with_indexes(X, Y, indexes=indexes,
+                                              clf=clf, clfk=clfk,report_metrics=report_metrics,norm=norm)
+    metrics_report = {'name':regressor_name}
+    for m in metrics.keys():
+        stats = metrics_stats(metrics[m],rn=3)
+        for sk in stats.keys():
+            metrics_report[m+"_"+sk]=stats[sk]
+    metrics_report.update(clfk)
+    report_data.append(metrics_report.copy())
+    odf = pd.DataFrame(report_data[:])
+    odf = odf.sort_values(by=[sort_report_by+"_mean"],ascending=False)
+    mean_cols = list(filter(lambda x: "mean" in x,list(odf.columns)))
+    ocols = ['name']
+    ocols.extend(clfk)
+    ocols.extend(mean_cols)
+    ocols.extend(list(filter(lambda x: x not in ocols,odf.columns)))
+    odf = odf[ocols].reset_index(drop=True)
+    return odf.copy()
+
+def get_train_test_indexes(X,Y,stratus_list,kfold=5,shuffle=True):
+    from sklearn.model_selection import StratifiedKFold
+    skf = StratifiedKFold(n_splits=kfold,shuffle=shuffle)
+    x = X.copy()
+    if len(X.shape)>2:
+        x=np.random.random((X.shape[0],1))
+    skf.get_n_splits(x, stratus_list)
+    y=Y.copy()
+    if len(Y.shape)>1:
+        y=Y[:,0]
+    train_indexes,test_indexes = [],[]
+    for train_index, test_index in skf.split(x, y):
+        train_indexes.append(train_index.copy())
+        test_indexes.append(test_index.copy())
+    return train_indexes[:],test_indexes[:]
