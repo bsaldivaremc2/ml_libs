@@ -96,3 +96,31 @@ def get_vector_from_list(ilist):
         base[0,i]=1
         output[ilist[i]]=base.copy()
     return output.copy()
+
+def fill_zeros_right(iv,digits_number=3):
+    """
+    Transform an input into string and  add digits_number zeros to the right .
+    e.g.:
+    fill_zeros_right(2.41,digits_number=3)
+    returns: '2.410'
+    """
+    ox = iv
+    if type(iv)!=str:
+        ox = str(ox)
+    if "." not in ox:
+        ox = ox+".0"
+    oxi, oxo = ox.split(".")
+    _ = (digits_number - len(oxo))*"0"
+    return oxi+"."+oxo+_
+
+def get_random_one_zero_density_variable(n,cols,one_prob=0.02):
+    import numpy as np
+    """
+    Returns a matrix with the same ones and zeros' probability than reference_matrix.
+    The returned matrix has the same shape as the reference_matrix.
+    """
+    shape = (n,cols)
+    inp = np.zeros(shape)
+    v = inp.flatten()
+    zero_prob = 1 - one_prob
+    return np.random.choice([0,1],size=shape,p=[zero_prob,one_prob]).copy()

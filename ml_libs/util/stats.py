@@ -45,3 +45,20 @@ def paired_t_test(inp1,inp2,round_digits=4):
     o = pd.concat([pd.DataFrame(data=pv,columns=['pvalue']),
         pd.DataFrame(data=pvv,columns=['pvalue<0.05'])],1)
     return o.copy()
+
+def get_one_prob(inp):
+    return (inp.sum()/inp.flatten().shape[0])
+
+def random_one_zero_density(reference_matrix):
+    import numpy as np
+    """
+    Returns a matrix with the same ones and zeros' probability than reference_matrix.
+    The returned matrix has the same shape as the reference_matrix.
+    """
+    inp = reference_matrix.copy()
+    shape = inp.shape
+    v = inp.flatten()
+    n = v.shape[0]
+    one_prob = v.sum()/n
+    zero_prob = 1 - one_prob
+    return np.random.choice([0,1],size=shape,p=[zero_prob,one_prob]).copy()

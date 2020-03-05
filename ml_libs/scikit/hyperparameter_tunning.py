@@ -340,6 +340,8 @@ def cv_metrics_stratified_class_with_indexes(X, Y, indexes,clf, clfk={}, kfold=5
                 output_metrics[m].append(calc_metrics[m](y_test,pred_test))
     return output_metrics.copy()
 
+
+
 def cv_metrics_stratified_class_report_with_indexes(X, Y, indexes,clf, clfk={}, kfold=5,shuffle=True,
                                report_metrics=['roc_auc_score','auc','f1_score','sensitivity','specificity'],
                                       regressor_name='Regressor',sort_report_by='roc_auc_score',norm=False):
@@ -378,3 +380,27 @@ def get_train_test_indexes(X,Y,stratus_list,kfold=5,shuffle=True):
         train_indexes.append(train_index.copy())
         test_indexes.append(test_index.copy())
     return train_indexes[:],test_indexes[:]
+
+def get_rfe_best_cols_with_indexes(iX,iY,iclf,iclfk,indexes,metric_to_improve='roc_auc_score_mean',
+                                  cv_kargs={'report_metrics':['roc_auc_score','f1_score','sensitivity','specificity'],
+                             'kfold':5,'shuffle':True ,'norm':False}):
+    from sklearn.feature_selection import RFE
+    performance = 0
+    sort_report_by = "_".join(metric_to_improve.split("_")[:-1])
+    est = iclf(**iclfk)
+    selector = RFE(est, n_features_to_select=1, step=1, verbose=0)
+    selector.fit(iX,iY)
+    ranking = selector.ranking_
+    for feats in range(1,iX.shape[1]):
+    #for feats in range(1,3):
+        valid_cols = ranking<=feats
+        Xrfe = iX[:,valid_cols]
+        report = cv_metrics_stratified_class_report_with_indexes(Xrfe, iY,zip(*indexes),
+                                                                     iclf, iclfk, regressor_name='Regressor',
+                                                                     sort_report_by=sort_report_by,**cv_kargs)
+        performance_ = report[metric_to_improve].values[0]
+        if performance_ > performance:
+            performance = performance_
+            print("Feats: {} . {} Performance: {}".format(feats,metric_to_improve,performance))
+            best_cols = valid_cols
+    return best_cols.copy()
