@@ -404,3 +404,100 @@ def get_rfe_best_cols_with_indexes(iX,iY,iclf,iclfk,indexes,metric_to_improve='r
             print("Feats: {} . {} Performance: {}".format(feats,metric_to_improve,performance))
             best_cols = valid_cols
     return best_cols.copy()
+
+def cv_metrics_stratified_class_with_indexes_and_transform(X, Y, indexes,clf, clfk={}, transform=None, kfold=5,shuffle=True,
+                               report_metrics=['roc_auc_score','auc','f1_score','sensitivity','specificity'],
+                               norm=False,calc_stats=True,report_name='CLF',sort_metric = 'roc_auc_score_min',
+                               load_features_number=None):
+    #https://scikit-learn.org/stable/modules/model_evaluation.html#classification-metrics
+    from sklearn import metrics
+    from sklearn.feature_selection import RFE
+    from sklearn.cross_decomposition import PLSRegression
+    from sklearn.decomposition import PCA
+    output_objs = {}
+    calc_metrics = {'roc_auc_score':metrics.roc_auc_score,
+                  'auc':metrics.auc,
+                  'f1_score':metrics.f1_score,
+                  'sensitivity':get_binary_sensitivity,
+                  'specificity':get_binary_specificity
+                 }
+    transformations = {'PCA':PCA,'PLS':PLSRegression,'RFE':RFE,None:None}
+    output_metrics = {}
+    stats_df = []
+    report_name_sufix = ''
+    transformations_params = {}
+    for train_index, test_index in indexes:
+        X_train, X_test = X[train_index], X[test_index]
+        y_train, y_test = Y[train_index], Y[test_index]
+        total_features = X_train.shape[-1]
+        number_of_features = total_features
+        r = clf(**clfk)
+        if type(transform)==str:
+            if transform=='PCA':
+                pca = PCA(n_components=total_features)
+                pca.fit(X_train)
+                transformations_params['transform_obj']=pca
+                X_train = pca.transform(X_train)
+                X_test = pca.transform(X_test)
+                number_of_features = 1
+                report_name_sufix = '_PCA'
+            elif transform=='PLS':
+                pls = PLSRegression(n_components=total_features)
+                pls.fit(X_train,y_train)
+                transformations_params['transform_obj']=pls
+                X_train = pls.transform(X_train)
+                X_test = pls.transform(X_test)
+                number_of_features = 1
+                report_name_sufix = '_PLS'
+            elif transform=='RFE':
+                number_of_features = 1
+                report_name_sufix = '_RFE'
+                selector = RFE(r, n_features_to_select=1, step=1, verbose=0)
+                selector.fit(X_train,y_train)
+                ranking = selector.ranking_
+                ranking = np.argsort(ranking)
+                X_train = X_train[:,ranking]
+                X_test = X_test[:,ranking]
+                transformations_params['column order']=ranking.copy()
+        if len(y_test.shape)>1:
+            y_test = y_test.argmax(1)
+        if norm==True:
+            n_mean = X_train.mean(0)
+            n_std = X_train.std(0)
+            def z_score(ix,im,istd):
+                return (ix-im)/istd
+            X_train, X_test = z_score(X_train,n_mean,n_std),z_score(X_test,n_mean,n_std)
+        start_feature_number = number_of_features
+        end_feature_number = total_features + 1
+        if type(load_features_number)==int:
+            start_feature_number = load_features_number
+            end_feature_number = load_features_number + 1
+        for feature_number in range(start_feature_number,end_feature_number):
+            tmp_scores = output_metrics.get('F'+str(feature_number),{})
+            X_train_ = X_train[:,:feature_number]
+            X_test_ = X_test[:,:feature_number]
+            r.fit(X_train_, y_train)
+            pred_test = r.predict(X_test_)
+            pred_prob = r.predict_proba(X_test_)[:,1]
+            for m in report_metrics:
+                tmp_metric = tmp_scores.get(m,[])
+                if m in ['roc_auc_score']:
+                    tmp_metric.append(calc_metrics[m](y_test,pred_prob))
+                else:
+                    tmp_metric.append(calc_metrics[m](y_test,pred_test))
+                tmp_scores[m] = tmp_metric
+            output_metrics['F'+str(feature_number)] = tmp_scores
+    
+    if calc_stats==True:
+        for fn in range(number_of_features,total_features+1):
+            fk = 'F'+str(fn)
+            metrics = output_metrics[fk]
+            metrics_report = {'Name':report_name+report_name_sufix,'Number of Variables':fn}
+            for m in metrics.keys():
+                stats = metrics_stats(metrics[m],rn=3)
+                for sk in stats.keys():
+                    metrics_report[m+"_"+sk]=stats[sk]
+            stats_df.append(metrics_report)
+        stats_df = pd.DataFrame(stats_df).sort_values(by=[sort_metric,'Number of Variables'],ascending=[False,True]).reset_index(drop=True)
+    transformations_params['transformation']=transformations[transform]
+    return output_metrics.copy(),stats_df.copy(),transformations_params.copy()
