@@ -124,3 +124,9 @@ def get_random_one_zero_density_variable(n,cols,one_prob=0.02):
     v = inp.flatten()
     zero_prob = 1 - one_prob
     return np.random.choice([0,1],size=shape,p=[zero_prob,one_prob]).copy()
+
+def validate_multiple_conditions(conditions):
+    o = True
+    for condition in conditions:
+        o = o and condition
+    return o
