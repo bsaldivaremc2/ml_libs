@@ -407,7 +407,7 @@ def get_rfe_best_cols_with_indexes(iX,iY,iclf,iclfk,indexes,metric_to_improve='r
 
 
 def transform_x_train_test(ix_train,ix_test,iy_train,iy_test,
-                           transform=None,iclf=None,iclfk=None,features_top_n = None):
+                           transform=None,iclf=None,iclfk=None,features_top_n = None,vector=None):
     x_tr,x_ts,y_tr,y_ts = ix_train.copy(),ix_test.copy(),iy_train.copy(),iy_test.copy()
     total_features = x_tr.shape[1]
     if type(features_top_n)==int:
@@ -434,8 +434,11 @@ def transform_x_train_test(ix_train,ix_test,iy_train,iy_test,
             ranking = np.argsort(ranking)
             x_tr = x_tr[:,ranking]
             x_ts = x_ts[:,ranking]
+            if type(vector)!=type(None):#
+              xv = vector[ranking,:]#
+              x_tr = np.dot(x_tr,xv)#
+              x_ts = np.dot(x_ts,xv)#
     return x_tr.copy(),x_ts.copy(),y_tr.copy(),y_ts.copy()
-
 
 
 def z_score(ix,im,istd):
@@ -474,60 +477,17 @@ def fit_and_get_metrics(ix_train,ix_test,iy_train,iy_test,iclf,iclfk,
     return tmp_scores.copy()
     output_metrics['F'+str(feature_number)] = tmp_scores
 
-"""
-def cv_metrics_stratified_class_with_indexes_and_transform(X, Y, indexes,iclf, iclfk={}, transform=None, kfold=5,shuffle=True,
-                               report_metrics=['roc_auc_score','auc','f1_score','sensitivity','specificity'],
-                               norm=False,calc_stats=True,report_name='CLF',sort_metric = 'roc_auc_score_min'):
-    output_objs = {}
-    output_metrics = {}
-    stats_df = []
-    report_name_sufix = ''
-    for train_index, test_index in indexes:
-        X_train, X_test = X[train_index], X[test_index]
-        y_train, y_test = Y[train_index], Y[test_index]
-        total_features = X_train.shape[-1]
-        number_of_features = total_features
-        if type(transform)==str:
-            report_name_sufix = "_"+transform
-            number_of_features = 1
-            X_train, X_test, y_train, y_test = transform_x_train_test(X_train, X_test, y_train, y_test,
-                           transform=transform,iclf=iclf,iclfk=iclfk)
-        if len(y_test.shape)>1:
-            y_test = y_test.argmax(1)
-        if norm==True:
-            X_train,X_test = norm_z_score(X_train,X_test)
-        start_feature_number = number_of_features
-        end_feature_number = total_features + 1
-        for feature_number in range(start_feature_number,end_feature_number):
-            tmp_scores = output_metrics.get('F'+str(feature_number),{})
-            X_train_ = X_train[:,:feature_number]
-            X_test_ = X_test[:,:feature_number]
-            tmp_scores = fit_and_get_metrics(X_train_,X_test_,y_train,y_test,iclf,iclfk,
-                                                 report_metrics,tmp_scores)
-            output_metrics['F'+str(feature_number)] = tmp_scores
-    if calc_stats==True:
-        for fn in range(number_of_features,total_features+1):
-            fk = 'F'+str(fn)
-            metrics = output_metrics[fk]
-            metrics_report = {'Name':report_name+report_name_sufix,'Number of Variables':fn}
-            for m in metrics.keys():
-                stats = metrics_stats(metrics[m],rn=3)
-                for sk in stats.keys():
-                    metrics_report[m+"_"+sk]=stats[sk]
-            stats_df.append(metrics_report)
-        stats_df = pd.DataFrame(stats_df).sort_values(by=[sort_metric,'Number of Variables'],ascending=[False,True]).reset_index(drop=True)
-    return output_metrics.copy(),stats_df.copy()
-"""
-
 def transform_and_join(iXs,iy,train_index,test_index,transformations,features_top_ns,
-                       iclf,iclfk,joint_transformation=None,dot_product=False):
+                       iclf,iclfk,joint_transformation=None,dot_product=False,vectors=[]):
     X_trains,X_tests = [],[]
+    if len(vectors)==0:
+      vectors = [None for _ in range(len(iXs))]
     y_train, y_test = iy[train_index].copy(), iy[test_index].copy()
-    for X,transform,features_top_n in zip(iXs,transformations,features_top_ns):
+    for X,transform,features_top_n,vector in zip(iXs,transformations,features_top_ns,vectors):
         X_train, X_test = X[train_index].copy(), X[test_index].copy()
         if type(transform)==str:
             X_train, X_test, y_train, y_test = transform_x_train_test(X_train, X_test, y_train, y_test,
-                           transform,iclf,iclfk,features_top_n)
+                           transform,iclf,iclfk,features_top_n,vector)
         X_trains.append(X_train.copy())
         X_tests.append(X_test.copy())
     if dot_product:
@@ -550,7 +510,7 @@ def transform_and_join(iXs,iy,train_index,test_index,transformations,features_to
 def cv_metrics_stratified_class_with_indexes_and_transform(X, Y, indexes,iclf, iclfk={}, transform=None, kfold=5,shuffle=True,
                                report_metrics=['matthews_corr_coef','roc_auc_score','f1_score','sensitivity','specificity'],
                                norm=False,calc_stats=True,report_name='CLF',sort_metric = 'roc_auc_score_min',
-                                                          transformations=[],features_top_ns=[],X_names=[]):
+                                                          transformations=[],features_top_ns=[],X_names=[],vectors=[],vector=None):
     output_objs = {}
     output_metrics = {}
     stats_df = []
@@ -563,7 +523,7 @@ def cv_metrics_stratified_class_with_indexes_and_transform(X, Y, indexes,iclf, i
         if multiple_x:
             X_train, X_test,y_train, y_test = transform_and_join(X,Y,train_index,test_index,
                                                                  transformations,features_top_ns,
-                       iclf,iclfk,joint_transformation=None)
+                       iclf,iclfk,joint_transformation=None,vectors=vectors)
             report_name_sufix_xs = [ xn+"_"+tr+"_"+str(feats) for xn,tr,feats in zip(X_names,transformations,features_top_ns)]
             report_name_sufix_xs = " & ".join(report_name_sufix_xs)
         else:
@@ -575,7 +535,7 @@ def cv_metrics_stratified_class_with_indexes_and_transform(X, Y, indexes,iclf, i
             report_name_sufix = report_name_sufix_xs+"_"+transform
             number_of_features = 1
             X_train, X_test, y_train, y_test = transform_x_train_test(X_train, X_test, y_train, y_test,
-                           transform=transform,iclf=iclf,iclfk=iclfk)
+                           transform=transform,iclf=iclf,iclfk=iclfk,vector=vector)
         if len(y_test.shape)>1:
             y_test = y_test.argmax(1)
         if norm==True:
