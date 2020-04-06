@@ -510,13 +510,14 @@ def transform_and_join(iXs,iy,train_index,test_index,transformations,features_to
 def cv_metrics_stratified_class_with_indexes_and_transform(X, Y, indexes,iclf, iclfk={}, transform=None, kfold=5,shuffle=True,
                                report_metrics=['matthews_corr_coef','roc_auc_score','f1_score','sensitivity','specificity'],
                                norm=False,calc_stats=True,report_name='CLF',sort_metric = 'roc_auc_score_min',
-                                                          transformations=[],features_top_ns=[],X_names=[],vectors=[],vector=None):
+                                                          transformations=[],features_top_ns=[],X_names=[],vectors=[],vector=None,
+                                                          allow_x_list_size=1):
     output_objs = {}
     output_metrics = {}
     stats_df = []
     report_name_sufix = ''
     report_name_sufix_xs = ''
-    conditions = [type(X)==list,len(transformations)>1,
+    conditions = [type(X)==list,len(transformations)>allow_x_list_size,
                   len(features_top_ns)==len(transformations),len(X_names)==len(transformations)]#
     multiple_x = utils.validate_multiple_conditions(conditions)#
     for train_index, test_index in indexes:
