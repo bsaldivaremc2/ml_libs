@@ -431,7 +431,7 @@ def transform_x_train_test(ix_train,ix_test,iy_train,iy_test,
             selector = RFE(r, n_features_to_select=1, step=1, verbose=0)
             selector.fit(x_tr,y_tr)
             ranking = selector.ranking_
-            ranking = np.argsort(ranking)
+            ranking = np.argsort(ranking)[:total_features]
             x_tr = x_tr[:,ranking]
             x_ts = x_ts[:,ranking]
             if type(vector)!=type(None):#
