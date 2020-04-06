@@ -157,7 +157,7 @@ def get_top_corr(ix,iy,get_top_cc = 10):
     return ix[:,top_cc_index].copy()
 
 def cv_metrics_stratified_class(X, Y, stratus_list,clf, clfk={}, kfold=5,shuffle=True,
-                               report_metrics=['roc_auc_score','auc','f1_score','sensitivity','specificity'],
+                               report_metrics=['matthews_corr_coef','roc_auc_score','f1_score','sensitivity','specificity'],
                                norm=False):
     #https://scikit-learn.org/stable/modules/model_evaluation.html#classification-metrics
     from sklearn.model_selection import StratifiedKFold
@@ -247,7 +247,7 @@ def grid_search_own_metrics_class_stratified(ix,iy,stratus_list,
                                          regressor_name="Regressor",
                                          show_progress_percentage=0.1, kfold=5,shuffle=True,
                                             sort_report_by='roc_auc_score',metrics_kargs={
-                                            'kfold':5,'shuffle':True,'report_metrics':['roc_auc_score','auc','f1_score','sensitivity','specificity']
+                                            'kfold':5,'shuffle':True,'report_metrics':['matthews_corr_coef','roc_auc_score','f1_score','sensitivity','specificity']
                                             }):
     clfks = get_grid_hyperparams(**get_grid_hyperparams_kargs)
     report_data = []
@@ -281,7 +281,7 @@ def grid_search_own_metrics_class_stratified(ix,iy,stratus_list,
 
 
 def cv_metrics_stratified_class_report(X, Y, stratus_list,clf, clfk={}, kfold=5,shuffle=True,
-                               report_metrics=['roc_auc_score','auc','f1_score','sensitivity','specificity'],
+                               report_metrics=['matthews_corr_coef','roc_auc_score','f1_score','sensitivity','specificity'],
                                       regressor_name='Regressor',sort_report_by='roc_auc_score',norm=False):
     report_data = []
     metrics = cv_metrics_stratified_class(X, Y, stratus_list=stratus_list,
@@ -305,7 +305,7 @@ def cv_metrics_stratified_class_report(X, Y, stratus_list,clf, clfk={}, kfold=5,
 
 
 def cv_metrics_stratified_class_with_indexes(X, Y, indexes,clf, clfk={}, kfold=5,shuffle=True,
-                               report_metrics=['roc_auc_score','auc','f1_score','sensitivity','specificity'],
+                               report_metrics=['matthews_corr_coef','roc_auc_score','f1_score','sensitivity','specificity'],
                                norm=False):
     #https://scikit-learn.org/stable/modules/model_evaluation.html#classification-metrics
     from sklearn import metrics
@@ -343,7 +343,7 @@ def cv_metrics_stratified_class_with_indexes(X, Y, indexes,clf, clfk={}, kfold=5
 
 
 def cv_metrics_stratified_class_report_with_indexes(X, Y, indexes,clf, clfk={}, kfold=5,shuffle=True,
-                               report_metrics=['roc_auc_score','auc','f1_score','sensitivity','specificity'],
+                               report_metrics=['matthews_corr_coef','roc_auc_score','f1_score','sensitivity','specificity'],
                                       regressor_name='Regressor',sort_report_by='roc_auc_score',norm=False):
     report_data = []
     metrics = cv_metrics_stratified_class_with_indexes(X, Y, indexes=indexes,
@@ -382,7 +382,7 @@ def get_train_test_indexes(X,Y,stratus_list,kfold=5,shuffle=True):
     return train_indexes[:],test_indexes[:]
 
 def get_rfe_best_cols_with_indexes(iX,iY,iclf,iclfk,indexes,metric_to_improve='roc_auc_score_mean',
-                                  cv_kargs={'report_metrics':['roc_auc_score','f1_score','sensitivity','specificity'],
+                                  cv_kargs={'report_metrics':['matthews_corr_coef','roc_auc_score','f1_score','sensitivity','specificity'],
                              'kfold':5,'shuffle':True ,'norm':False}):
     from sklearn.feature_selection import RFE
     performance = 0
@@ -448,7 +448,7 @@ def norm_z_score(ix_train,ix_test):
     return ox_train.copy(),ox_test.copy()
 
 def fit_and_get_metrics(ix_train,ix_test,iy_train,iy_test,iclf,iclfk,
-                report_metrics=['roc_auc_score','f1_score','sensitivity','specificity'],
+                report_metrics=['matthews_corr_coef','roc_auc_score','f1_score','sensitivity','specificity'],
                        scores_idic={}):
     #https://scikit-learn.org/stable/modules/model_evaluation.html#classification-metrics
     from sklearn import metrics
@@ -456,7 +456,8 @@ def fit_and_get_metrics(ix_train,ix_test,iy_train,iy_test,iclf,iclfk,
                   'auc':metrics.auc,
                   'f1_score':metrics.f1_score,
                   'sensitivity':get_binary_sensitivity,
-                  'specificity':get_binary_specificity
+                  'specificity':get_binary_specificity,
+                  'matthews_corr_coef':metrics.matthews_corrcoef
                  }
     r = iclf(**iclfk)
     r.fit(ix_train, iy_train)
@@ -545,9 +546,9 @@ def transform_and_join(iXs,iy,train_index,test_index,transformations,features_to
         X_train, X_test, y_train, y_test = transform_x_train_test(X_train, X_test, y_train, y_test,
                            transform=transform,iclf=iclf,iclfk=iclfk)
     return X_train.copy(),X_test.copy(),y_train.copy(),y_test.copy()
-            
+
 def cv_metrics_stratified_class_with_indexes_and_transform(X, Y, indexes,iclf, iclfk={}, transform=None, kfold=5,shuffle=True,
-                               report_metrics=['roc_auc_score','auc','f1_score','sensitivity','specificity'],
+                               report_metrics=['matthews_corr_coef','roc_auc_score','f1_score','sensitivity','specificity'],
                                norm=False,calc_stats=True,report_name='CLF',sort_metric = 'roc_auc_score_min',
                                                           transformations=[],features_top_ns=[],X_names=[]):
     output_objs = {}
@@ -600,4 +601,3 @@ def cv_metrics_stratified_class_with_indexes_and_transform(X, Y, indexes,iclf, i
             stats_df.append(metrics_report)
         stats_df = pd.DataFrame(stats_df).sort_values(by=[sort_metric,'Number of Variables'],ascending=[False,True]).reset_index(drop=True)
     return output_metrics.copy(),stats_df.copy()
-
