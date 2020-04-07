@@ -44,9 +44,15 @@ def end_file(ifile, message="Train end: ", time_stamp=True):
             f.write(message + "\n")
 
 
-def append_file(ifile, message="Train end: "):
+def append_file(ifile, message="Train end: ",time_stamp=False):
+    from datetime import datetime
+    now = datetime.utcnow()
+    now = str(now).split(".")[0].replace(":", "_").replace("-", "_").replace(" ", "__")
     with open(ifile, 'a') as f:
-        f.write(message + "\n")
+        if time_stamp == True:
+            f.write(message + " {}\n".format(now))
+        else:
+            f.write(message + "\n")
 
 def str_to_tuple(istr):
   """

@@ -438,6 +438,14 @@ def transform_x_train_test(ix_train,ix_test,iy_train,iy_test,
               xv = vector[ranking,:]#
               x_tr = np.dot(x_tr,xv)#
               x_ts = np.dot(x_ts,xv)#
+              r = iclf(**iclfk)
+              selector = RFE(r, n_features_to_select=1, step=1, verbose=0)
+              selector.fit(x_tr,y_tr)
+              ranking = selector.ranking_
+              ranking = np.argsort(ranking)
+              x_tr = x_tr[:,ranking]
+              x_ts = x_ts[:,ranking]
+              utils.append_file("./log.log","RFE with Vector",time_stamp=True)
     return x_tr.copy(),x_ts.copy(),y_tr.copy(),y_ts.copy()
 
 
