@@ -1,5 +1,5 @@
 import numpy as np
-
+import pandas as pd
 def get_confidence_interval(std,n,degrees_of_freedom,confidence_level=0.95):
     """
     Returns confidence interval margin to add and substract from the mean.
