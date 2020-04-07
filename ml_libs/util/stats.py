@@ -1,3 +1,5 @@
+import numpy as np
+
 def get_confidence_interval(std,n,degrees_of_freedom,confidence_level=0.95):
     """
     Returns confidence interval margin to add and substract from the mean.
@@ -5,13 +7,13 @@ def get_confidence_interval(std,n,degrees_of_freedom,confidence_level=0.95):
     n: sample size
     degrees_of_freedom: degrees of freedom, n-1
     Confidence_level: Confidence level
-    Reference: 
+    Reference:
     https://www.statisticshowto.datasciencecentral.com/probability-and-statistics/confidence-interval/
-    
+
     Example:
     get_confidence_interval(0.5,10,9,confidence_level=0.95)
     returns: 0.357
-    
+
     """
     from scipy.stats import t
     import numpy as np
@@ -36,7 +38,7 @@ def anova_2_df(idf1,idf2):
     return odf.copy()
 
 def paired_t_test(inp1,inp2,round_digits=4):
-    from scipy import stats as st    
+    from scipy import stats as st
     _ = st.ttest_rel(inp1,inp2)
     pv = _.pvalue
     pvv = (pv<0.05)
