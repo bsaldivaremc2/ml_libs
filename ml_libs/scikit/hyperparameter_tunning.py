@@ -568,6 +568,7 @@ def cv_metrics_stratified_class_with_indexes_and_transform(X, Y, indexes,iclf, i
 
 
 def get_RFE_consistent_priority(iX,iy,train_indexes,iclf,iclfk):
+  from sklearn.feature_selection import RFE
   rankings = []
   for train_index in train_indexes:
     x_tr = iX[train_index].copy()
