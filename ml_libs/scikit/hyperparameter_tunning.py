@@ -589,6 +589,7 @@ def cv_metrics_df_with_indexes(X, Y, train_indexes, test_indexes,iclf, iclfk={},
     output_metrics = {}
     stats_df = []
     report_name_sufix = ''
+    total_features = X.shape[-1]
     for train_index, test_index in zip(train_indexes,test_indexes):
       X_train, X_test = X[train_index], X[test_index]
       y_train, y_test = Y[train_index], Y[test_index]
