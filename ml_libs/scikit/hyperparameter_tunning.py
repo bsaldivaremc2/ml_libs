@@ -590,7 +590,6 @@ def cv_metrics_df_with_indexes(X, Y, train_indexes, test_indexes,iclf, iclfk={},
     stats_df = []
     report_name_sufix = ''
     total_features = X.shape[-1]
-    number_of_features = total_features
     for train_index, test_index in zip(train_indexes,test_indexes):
       X_train, X_test = X[train_index], X[test_index]
       y_train, y_test = Y[train_index], Y[test_index]
@@ -607,6 +606,7 @@ def cv_metrics_df_with_indexes(X, Y, train_indexes, test_indexes,iclf, iclfk={},
         tmp_scores = fit_and_get_metrics(X_train_,X_test_,y_train,y_test,iclf,iclfk,report_metrics,tmp_scores)
         output_metrics['F'+str(feature_number)] = tmp_scores
     if calc_stats==True:
+        number_of_features = 1
         for fn in range(number_of_features,total_features+1):
             fk = 'F'+str(fn)
             metrics = output_metrics[fk]
