@@ -478,7 +478,7 @@ def fit_and_get_metrics(ix_train,ix_test,iy_train,iy_test,iclf,iclfk,
             tmp_metric.append(calc_metrics[m](iy_test,pred_test))
         tmp_scores[m] = tmp_metric
     return tmp_scores.copy()
-    output_metrics['F'+str(feature_number)] = tmp_scores
+    #output_metrics['F'+str(feature_number)] = tmp_scores
 
 def transform_and_join(iXs,iy,train_index,test_index,transformations,features_top_ns,
                        iclf,iclfk,joint_transformation=None,dot_product=False,vectors=[]):
@@ -553,6 +553,56 @@ def cv_metrics_stratified_class_with_indexes_and_transform(X, Y, indexes,iclf, i
             tmp_scores = fit_and_get_metrics(X_train_,X_test_,y_train,y_test,iclf,iclfk,
                                                  report_metrics,tmp_scores)
             output_metrics['F'+str(feature_number)] = tmp_scores
+    if calc_stats==True:
+        for fn in range(number_of_features,total_features+1):
+            fk = 'F'+str(fn)
+            metrics = output_metrics[fk]
+            metrics_report = {'Name':report_name+report_name_sufix,'Number of Variables':fn}
+            for m in metrics.keys():
+                stats = metrics_stats(metrics[m],rn=3)
+                for sk in stats.keys():
+                    metrics_report[m+"_"+sk]=stats[sk]
+            stats_df.append(metrics_report)
+        stats_df = pd.DataFrame(stats_df).sort_values(by=[sort_metric,'Number of Variables'],ascending=[False,True]).reset_index(drop=True)
+    return output_metrics.copy(),stats_df.copy()
+
+
+def get_RFE_consistent_priority(iX,iy,train_indexes,iclf,iclfk):
+  rankings = []
+  for train_index in train_indexes:
+    x_tr = iX[train_index].copy()
+    y_tr = iy[train_index].copy()
+    r = iclf(**iclfk)
+    selector = RFE(r, n_features_to_select=1, step=1, verbose=0)
+    selector.fit(x_tr,y_tr)
+    ranking = selector.ranking_
+    rankings.append(ranking.copy())
+  rankings = np.vstack(rankings).sum(0)
+  ranking = np.argsort(rankings)
+  return ranking
+
+def cv_metrics_df_with_indexes(X, Y, train_indexes, test_indexes,iclf, iclfk={},
+                               report_metrics=['matthews_corr_coef','roc_auc_score','f1_score','sensitivity','specificity'],
+                               norm=False,calc_stats=True,report_name='CLF',sort_metric = 'matthews_corr_coef_min'):
+    output_objs = {}
+    output_metrics = {}
+    stats_df = []
+    report_name_sufix = ''
+    for train_index, test_index in zip(train_indexes,test_indexes):
+      X_train, X_test = X[train_index], X[test_index]
+      y_train, y_test = Y[train_index], Y[test_index]
+      if len(y_test.shape)>1:
+        y_test = y_test.argmax(1)
+      if norm==True:
+        X_train,X_test = norm_z_score(X_train,X_test)
+      start_feature_number = 1
+      end_feature_number = total_features + 1
+      for feature_number in range(start_feature_number,end_feature_number):
+        tmp_scores = output_metrics.get('F'+str(feature_number),{})
+        X_train_ = X_train[:,:feature_number]
+        X_test_ = X_test[:,:feature_number]
+        tmp_scores = fit_and_get_metrics(X_train_,X_test_,y_train,y_test,iclf,iclfk,report_metrics,tmp_scores)
+        output_metrics['F'+str(feature_number)] = tmp_scores
     if calc_stats==True:
         for fn in range(number_of_features,total_features+1):
             fk = 'F'+str(fn)
