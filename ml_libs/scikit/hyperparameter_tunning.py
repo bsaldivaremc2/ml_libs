@@ -623,7 +623,7 @@ def cv_metrics_df_with_indexes(X, Y, train_indexes, test_indexes,iclf, iclfk={},
 
 def get_metrics_class(y_true,y_pred,
                 report_metrics=['matthews_corr_coef','roc_auc_score','f1_score','sensitivity','specificity','accuracy'],
-                       scores_idic={}):
+                       scores_idic={},return_unit=False,round_digits=6):
     #https://scikit-learn.org/stable/modules/model_evaluation.html#classification-metrics
     from sklearn import metrics
     calc_metrics = {'roc_auc_score':metrics.roc_auc_score,
@@ -641,8 +641,10 @@ def get_metrics_class(y_true,y_pred,
     for m in report_metrics:
         tmp_metric = tmp_scores.get(m,[])
         if m in ['roc_auc_score']:
-            tmp_metric.append(calc_metrics[m](iy_test,pred_prob))
+            tmp_metric.append(round(calc_metrics[m](iy_test,pred_prob)),round_digits)
         else:
-            tmp_metric.append(calc_metrics[m](iy_test,pred_test))
+            tmp_metric.append(round(calc_metrics[m](iy_test,pred_test),round_digits))
+        if return_unit==True:
+            tmp_metric=tmp_metric[0]
         tmp_scores[m] = tmp_metric
     return tmp_scores.copy()
