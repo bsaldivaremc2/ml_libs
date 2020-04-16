@@ -641,7 +641,7 @@ def get_metrics_class(y_true,y_pred,
     for m in report_metrics:
         tmp_metric = tmp_scores.get(m,[])
         if m in ['roc_auc_score']:
-            tmp_metric.append(round(calc_metrics[m](iy_test,pred_prob)),round_digits)
+            tmp_metric.append(round(calc_metrics[m](iy_test,pred_prob),round_digits))
         else:
             tmp_metric.append(round(calc_metrics[m](iy_test,pred_test),round_digits))
         if return_unit==True:
