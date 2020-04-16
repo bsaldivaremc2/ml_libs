@@ -619,3 +619,30 @@ def cv_metrics_df_with_indexes(X, Y, train_indexes, test_indexes,iclf, iclfk={},
             stats_df.append(metrics_report)
         stats_df = pd.DataFrame(stats_df).sort_values(by=[sort_metric,'Number of Variables'],ascending=[False,True]).reset_index(drop=True)
     return output_metrics.copy(),stats_df.copy()
+
+
+def get_metrics_class(y_true,y_pred,
+                report_metrics=['matthews_corr_coef','roc_auc_score','f1_score','sensitivity','specificity','accuracy'],
+                       scores_idic={}):
+    #https://scikit-learn.org/stable/modules/model_evaluation.html#classification-metrics
+    from sklearn import metrics
+    calc_metrics = {'roc_auc_score':metrics.roc_auc_score,
+                  'auc':metrics.auc,
+                  'f1_score':metrics.f1_score,
+                  'sensitivity':get_binary_sensitivity,
+                  'specificity':get_binary_specificity,
+                  'matthews_corr_coef':metrics.matthews_corrcoef,
+                  'accuracy':metrics.accuracy_score
+                 }
+    iy_test = y_true
+    pred_test = y_pred.round()
+    pred_prob = y_pred
+    tmp_scores = scores_idic.copy()
+    for m in report_metrics:
+        tmp_metric = tmp_scores.get(m,[])
+        if m in ['roc_auc_score']:
+            tmp_metric.append(calc_metrics[m](iy_test,pred_prob))
+        else:
+            tmp_metric.append(calc_metrics[m](iy_test,pred_test))
+        tmp_scores[m] = tmp_metric
+    return tmp_scores.copy()
