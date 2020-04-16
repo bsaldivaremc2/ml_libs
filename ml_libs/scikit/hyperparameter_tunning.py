@@ -463,7 +463,8 @@ def fit_and_get_metrics(ix_train,ix_test,iy_train,iy_test,iclf,iclfk,
                   'f1_score':metrics.f1_score,
                   'sensitivity':get_binary_sensitivity,
                   'specificity':get_binary_specificity,
-                  'matthews_corr_coef':metrics.matthews_corrcoef
+                  'matthews_corr_coef':metrics.matthews_corrcoef,
+                  'accuracy':metrics.accuracy_score
                  }
     r = iclf(**iclfk)
     r.fit(ix_train, iy_train)
