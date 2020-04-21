@@ -648,3 +648,44 @@ def get_metrics_class(y_true,y_pred,
             tmp_metric=tmp_metric[0]
         tmp_scores[m] = tmp_metric
     return tmp_scores.copy()
+
+def get_train_val_test_indexes(X,Y,stratus_list=None,test_size=0.2,kfold=5,shuffle=True):
+    """
+    X = np.random.random((100,2))
+    y = np.random.randint(0,2,(100))
+    Tr, Vl, Ts = get_train_val_test_indexes(X,y,stratus_list=None,test_size=0.2,kfold=5,shuffle=True)
+    """
+    from sklearn.model_selection import StratifiedShuffleSplit as SSS
+    from sklearn.model_selection import StratifiedKFold
+    import numpy as np
+    #Check format
+    if type(stratus_list)==list:
+      stratus_list = np.array(stratus_list)
+    if type(stratus_list)==type(None):
+      stratus_list = Y.copy()
+    if type(test_size)!=float:
+      test_size=0.2
+    else:
+      if (test_size<=0) or (test_size>=1):
+        test_size=0.2
+    #init funcs
+    sss = SSS(n_splits=1, test_size=test_size, train_size=None, random_state=0)
+    skf = StratifiedKFold(n_splits=kfold,shuffle=shuffle)
+    x = X.copy()
+    y=Y.copy()
+    if len(X.shape)>2:
+        x=np.random.random((X.shape[0],1))
+    if len(Y.shape)>1:
+        y=Y[:,0]
+    TrainVal_Index, Test_Index = zip(*sss.split(x, stratus_list))
+    x_tr_val = TrainVal_Index[0]
+    y_tr_val = stratus_list[TrainVal_Index]
+    #Separate train and validation from test
+    skf.get_n_splits(x_tr_val,y_tr_val)
+    train_indexes,val_indexes = [],[]
+    for train_index, val_index in skf.split(x_tr_val, y_tr_val):
+      tr_i = x_tr_val[train_index]
+      val_i = x_tr_val[val_index]
+      train_indexes.append(tr_i.copy())
+      val_indexes.append(val_i.copy())
+    return train_indexes[:],val_indexes[:],TrainVal_Index[0].copy(),Test_Index[0].copy()
