@@ -669,7 +669,7 @@ def get_train_val_test_indexes(X,Y,stratus_list=None,test_size=0.2,kfold=5,shuff
       if (test_size<=0) or (test_size>=1):
         test_size=0.2
     #init funcs
-    sss = SSS(n_splits=1, test_size=test_size, train_size=None, random_state=0)
+    sss = SSS(n_splits=1, test_size=test_size, train_size=None)#ranndom_state=0
     skf = StratifiedKFold(n_splits=kfold,shuffle=shuffle)
     x = X.copy()
     y=Y.copy()
