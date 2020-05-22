@@ -689,3 +689,33 @@ def get_train_val_test_indexes(X,Y,stratus_list=None,test_size=0.2,kfold=5,shuff
       train_indexes.append(tr_i.copy())
       val_indexes.append(val_i.copy())
     return train_indexes[:],val_indexes[:],TrainVal_Index[0].copy(),Test_Index[0].copy()
+
+def get_train_val_test_indexes_no_cv(X,Y,stratus_list=None,test_val_size=0.15):
+  """
+  Outputs the train, validation and test split indexes
+  """
+  from sklearn.model_selection import StratifiedShuffleSplit as SSS
+  import numpy as np
+  samples = X.shape[0]
+  testn = int(round(samples*test_val_size))
+  testn = testn+1 if testn % 2==1 else testn #Give always even numbers
+  sss = SSS(n_splits=1, test_size=testn, train_size=None)#ranndom_state=0
+  #Check format
+  if type(stratus_list)==list:
+    stratus_list = np.array(stratus_list)
+  if type(stratus_list)==type(None):
+    stratus_list = Y.copy()
+  x = X.copy()
+  y=Y.copy()
+  if len(X.shape)>2:
+      x=np.random.random((samples,1))
+  if len(Y.shape)>1:
+      y=Y[:,0]
+  TrainVal_Index, Test_Index = zip(*sss.split(x, stratus_list))
+  x1 =np.arange(samples)
+  x2 = x1[TrainVal_Index]
+  y2 = stratus_list[TrainVal_Index]
+  Train_Index, Val_Index = zip(*sss.split(x2, y2))
+  TrainIndex, ValIndex, TestIndex = x2[Train_Index], x2[Val_Index], x1[Test_Index]
+  return TrainIndex.copy() , ValIndex.copy() , TestIndex.copy()
+  
