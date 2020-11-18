@@ -419,3 +419,22 @@ def draw_confidence_intervals_by_colors(idf,confidence_level=0.95,point_marker='
         fig.savefig(save+".png",dpi=dpi,bbox_inches = "tight",**save_kargs)
     if show!=True:
         plt.close()
+
+def plot_confusion_matrix(y_true,y_pred,labels=['A','G','C','T'],percentage=True,
+                          figsize=(10,10),dpi=80,annot=True,cmap="Blues_r",
+                          title="Confusion matrix",ylabel="Ground Truth",xlabel="Prediction"):
+  from sklearn.metrics import confusion_matrix
+  import seaborn as sns
+  cm = confusion_matrix(y_true, y_pred)
+  s1  = np.expand_dims(cm.sum(1),-1)
+  s1 = np.hstack([s1 for _ in range(s1.shape[0])])
+  data = cm
+  if percentage == True:
+    data = cm/s1
+  dfx = pd.DataFrame(data,columns=labels,index=labels)
+  fig = plt.figure(figsize=figsize,dpi=dpi)
+  plt.title(title)
+  sns.heatmap(dfx, annot=annot,cmap=cmap)
+  plt.xlabel(xlabel)
+  plt.ylabel(ylabel)
+  plt.show()
