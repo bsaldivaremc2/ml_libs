@@ -32,6 +32,7 @@ def plot_subplot_grid(iobjs,figsize=(18,6),dpi=80,
         xlabel_size = obj.get("xlabel_size",12)
         ylabel_size = obj.get("ylabel_size",12)
         plot_type = obj.get('plot_type','heatmap')
+        plot_kargs = obj.get('plot_kargs',{})
         if plot_type=="table":
             annot = tdf.values
             fmt = "d"
@@ -40,16 +41,16 @@ def plot_subplot_grid(iobjs,figsize=(18,6),dpi=80,
             tdf = pd.DataFrame(data=np.zeros_like(annot),columns=tdf.columns,index=tdf.index)
             sns.heatmap(tdf,cbar=False,cmap="Blues",annot=annot,fmt=fmt,
                        linewidths=1, linecolor='black',
-                       ax=ax)
+                       ax=ax,**plot_kargs)
             ax.xaxis.tick_top() # x axis on top
             ax.xaxis.set_label_position('top')
         elif plot_type=="heatmap":
-            sns.heatmap(tdf,cmap=cmap,ax=ax,cbar_kws=cbar_kws)
+            sns.heatmap(tdf,cmap=cmap,ax=ax,cbar_kws=cbar_kws,**plot_kargs)
         elif plot_type=="line":
             index = tdf.index.to_list()
             columns = tdf.columns.to_list()
             xs = [ _ for _ in range(len(columns))]
-            plt.plot(xs,tdf.values.transpose())
+            plt.plot(xs,tdf.values.transpose(),**plot_kargs)
             plt.legend(index)
             ax.set_xticks(xs)
             ax.set_xticklabels(columns,rotation=90)
